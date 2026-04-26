@@ -115,36 +115,48 @@ export default function Home() {
           <kbd className="bg-gray-100 px-1 rounded">Enter</kbd> or{" "}
           <kbd className="bg-gray-100 px-1 rounded">,</kbd> to add it
         </p>
-        <div
-          className="flex flex-wrap gap-2 border border-gray-300 rounded-lg p-2 min-h-[52px] focus-within:ring-2 focus-within:ring-amber-400 focus-within:border-amber-400 cursor-text"
-          onClick={() => document.getElementById("ingredient-input")?.focus()}
-        >
-          {ingredients.map((tag) => (
-            <span
-              key={tag}
-              className="flex items-center gap-1 bg-amber-100 text-amber-800 text-sm px-2 py-1 rounded-full"
-            >
-              {tag}
-              <button
-                type="button"
-                onClick={() => removeIngredient(tag)}
-                className="text-amber-600 hover:text-amber-900 leading-none ml-0.5"
-                aria-label={`Remove ${tag}`}
+        <div className="relative">
+          <div
+            className="flex flex-wrap gap-2 border border-gray-300 rounded-lg p-2 pr-8 min-h-[52px] focus-within:ring-2 focus-within:ring-amber-400 focus-within:border-amber-400 cursor-text"
+            onClick={() => document.getElementById("ingredient-input")?.focus()}
+          >
+            {ingredients.map((tag) => (
+              <span
+                key={tag}
+                className="flex items-center gap-1 bg-amber-100 text-amber-800 text-sm px-2 py-1 rounded-full"
               >
-                ×
-              </button>
-            </span>
-          ))}
-          <input
-            id="ingredient-input"
-            type="text"
-            value={ingredientInput}
-            onChange={(e) => setIngredientInput(e.target.value)}
-            onKeyDown={handleIngredientKeyDown}
-            onBlur={addIngredient}
-            placeholder={ingredients.length === 0 ? "e.g. chicken, garlic, lemon..." : ""}
-            className="flex-1 min-w-[140px] outline-none text-sm text-gray-800 bg-transparent placeholder-gray-400"
-          />
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeIngredient(tag)}
+                  className="text-amber-600 hover:text-amber-900 leading-none ml-0.5"
+                  aria-label={`Remove ${tag}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <input
+              id="ingredient-input"
+              type="text"
+              value={ingredientInput}
+              onChange={(e) => setIngredientInput(e.target.value)}
+              onKeyDown={handleIngredientKeyDown}
+              onBlur={addIngredient}
+              placeholder={ingredients.length === 0 ? "e.g. chicken, garlic, lemon..." : ""}
+              className="flex-1 min-w-[140px] outline-none text-sm text-gray-800 bg-transparent placeholder-gray-400"
+            />
+          </div>
+          {ingredients.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setIngredients([])}
+              aria-label="Clear all ingredients"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 leading-none"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* Cuisine */}
@@ -218,7 +230,7 @@ export default function Home() {
         <div>
           {result.summary && (
             <p className="text-amber-800 text-sm mb-5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-              {result.summary}
+              {renderBold(result.summary)}
             </p>
           )}
 
@@ -236,6 +248,12 @@ export default function Home() {
         </div>
       )}
     </main>
+  );
+}
+
+function renderBold(text: string) {
+  return text.split("**").map((part, i) =>
+    i % 2 === 1 ? <strong key={i}>{part}</strong> : part
   );
 }
 
