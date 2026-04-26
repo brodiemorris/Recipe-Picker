@@ -3,3 +3,19 @@
 CLAUDE.md
 .agents
 skills-lock.json
+.vercel
+
+# Next.js
+.next/
+out/
+
+# Dependencies
+node_modules/
+
+# Environment variables
+.env*.local
+.env
+
+# TypeScript
+tsconfig.tsbuildinfo
+next-env.d.ts
