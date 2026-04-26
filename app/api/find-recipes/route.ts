@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Subconscious, zodToJsonSchema } from "subconscious";
+import { Subconscious, zodToJsonSchema, parseAnswer } from "subconscious";
+
+export const maxDuration = 300;
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------
@@ -41,7 +43,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const baseUrl = process.env.BASE_URL;
+    const baseUrl =
+      process.env.BASE_URL ??
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
     if (!baseUrl) {
       return NextResponse.json(
         { error: "BASE_URL is not configured" },
@@ -152,7 +156,7 @@ Always look up full recipe details before returning results.`;
       );
     }
 
-    const result = run.result?.answer as unknown as RecipeResult;
+    const result = parseAnswer(run.result?.answer) as RecipeResult;
     return NextResponse.json(result);
   } catch (err) {
     console.error("[find-recipes]", err);
