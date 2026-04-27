@@ -1,51 +1,117 @@
 "use client";
 
-import { useState, KeyboardEvent } from "react";
+import { useState, KeyboardEvent, useEffect, useRef } from "react";
 import type { RecipeResult } from "@/app/api/find-recipes/route";
+import FridgeView from "@/app/components/FridgeView";
+import {
+  saveRecipe,
+  removeRecipe,
+  isRecipeSaved,
+} from "@/lib/saved-recipes";
 
 // Cuisine areas available in TheMealDB
 const CUISINE_OPTIONS = [
-  "American",
-  "British",
-  "Canadian",
-  "Chinese",
-  "Croatian",
-  "Dutch",
-  "Egyptian",
-  "Filipino",
-  "French",
-  "Greek",
-  "Indian",
-  "Irish",
-  "Italian",
-  "Jamaican",
-  "Japanese",
-  "Kenyan",
-  "Malaysian",
-  "Mexican",
-  "Moroccan",
-  "Nigerian",
-  "Polish",
-  "Portuguese",
-  "Russian",
-  "Spanish",
-  "Thai",
-  "Tunisian",
-  "Turkish",
-  "Ukrainian",
-  "Uruguayan",
-  "Vietnamese",
+  "American", "British", "Canadian", "Chinese", "Croatian", "Dutch",
+  "Egyptian", "Filipino", "French", "Greek", "Indian", "Irish", "Italian",
+  "Jamaican", "Japanese", "Kenyan", "Malaysian", "Mexican", "Moroccan",
+  "Nigerian", "Polish", "Portuguese", "Russian", "Spanish", "Thai",
+  "Tunisian", "Turkish", "Ukrainian", "Uruguayan", "Vietnamese",
 ];
+
+// ---------------------------------------------------------------------------
+// Food animation
+// ---------------------------------------------------------------------------
+
+const FOOD_SCENES = [
+  { main: "🥗", parts: ["🥬", "🍅", "🥕"] },
+  { main: "🍔", parts: ["🥩", "🧀", "🥬"] },
+  { main: "🍝", parts: ["🍅", "🧄", "🌿"] },
+  { main: "🌮", parts: ["🌽", "🥑", "🧅"] },
+];
+
+function FoodAnimation({ tick }: { tick: number }) {
+  const scene = FOOD_SCENES[tick % FOOD_SCENES.length];
+  return (
+    <div
+      key={tick}
+      className="relative flex items-end justify-center h-24 w-32 mx-auto"
+      style={{ animation: "fade-scene 0.4s ease" }}
+    >
+      {/* Falling ingredients */}
+      {scene.parts.map((part, i) => (
+        <span
+          key={i}
+          className="absolute text-2xl"
+          style={{
+            left: `${16 + i * 26}%`,
+            top: 0,
+            animation: `fall-in 0.5s ease forwards`,
+            animationDelay: `${i * 0.18}s`,
+            opacity: 0,
+          }}
+        >
+          {part}
+        </span>
+      ))}
+      {/* Main dish */}
+      <span className="text-6xl leading-none">{scene.main}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Progress card
+// ---------------------------------------------------------------------------
+
+function ProgressCard({
+  steps,
+  stepIndex,
+}: {
+  steps: string[];
+  stepIndex: number;
+}) {
+  const sceneTick = Math.floor(stepIndex / 2);
+  const progress = Math.min((stepIndex + 1) / steps.length, 1);
+
+  return (
+    <div className="bg-white rounded-2xl shadow-md p-6 mb-8 flex flex-col items-center gap-4">
+      <FoodAnimation tick={sceneTick} />
+      <p
+        key={stepIndex}
+        className="text-amber-800 text-sm font-medium text-center"
+        style={{ animation: "fade-scene 0.35s ease" }}
+      >
+        {steps[stepIndex]}
+      </p>
+      <div className="w-full bg-amber-100 rounded-full h-2">
+        <div
+          className="bg-amber-400 h-2 rounded-full transition-all duration-500"
+          style={{ width: `${progress * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
 
 export default function Home() {
   const [ingredientInput, setIngredientInput] = useState("");
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [cuisine, setCuisine] = useState("");
   const [loading, setLoading] = useState(false);
+  const [progressSteps, setProgressSteps] = useState<string[]>([]);
+  const [stepIndex, setStepIndex] = useState(0);
   const [result, setResult] = useState<RecipeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<"home" | "fridge">("home");
+  const stepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Add a tag from the current input
+  // Clean up timer on unmount
+  useEffect(() => () => { if (stepTimerRef.current) clearInterval(stepTimerRef.current); }, []);
+
   const addIngredient = () => {
     const trimmed = ingredientInput.trim();
     if (trimmed && !ingredients.includes(trimmed.toLowerCase())) {
@@ -69,9 +135,34 @@ export default function Home() {
 
   const handleSubmit = async () => {
     if (ingredients.length === 0) return;
+
+    // Build informed progress steps from actual request
+    const steps: string[] = [
+      ...ingredients.map((i) => `Searching for meals with ${i}…`),
+      ...(cuisine ? [`Filtering by ${cuisine} cuisine…`] : []),
+      "Comparing results…",
+      "Looking up recipe details…",
+      "Almost there…",
+    ];
+
     setLoading(true);
     setError(null);
     setResult(null);
+    setProgressSteps(steps);
+    setStepIndex(0);
+
+    // Advance steps on a timer; hold the last step until done
+    const msPerStep = Math.min(7000, Math.floor(55000 / steps.length));
+    let current = 0;
+    stepTimerRef.current = setInterval(() => {
+      current += 1;
+      if (current < steps.length - 1) {
+        setStepIndex(current);
+      } else {
+        setStepIndex(steps.length - 1);
+        clearInterval(stepTimerRef.current!);
+      }
+    }, msPerStep);
 
     try {
       const res = await fetch("/api/find-recipes", {
@@ -79,9 +170,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ingredients, cuisine: cuisine || undefined }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         setError(data.error ?? "Something went wrong");
       } else {
@@ -90,18 +179,33 @@ export default function Home() {
     } catch {
       setError("Failed to connect to the server");
     } finally {
+      if (stepTimerRef.current) {
+        clearInterval(stepTimerRef.current);
+        stepTimerRef.current = null;
+      }
       setLoading(false);
     }
   };
 
   return (
+    <>
     <main className="max-w-3xl mx-auto px-4 py-12">
       {/* Header */}
-      <div className="text-center mb-10">
+      <div className="relative text-center mb-10">
         <h1 className="text-4xl font-bold text-amber-800 mb-2">🍽️ Recipe Picker</h1>
         <p className="text-amber-700 text-lg">
           Tell us what you have, we&apos;ll find something delicious
         </p>
+        {/* Fridge link */}
+        <button
+          type="button"
+          onClick={() => setView("fridge")}
+          className="absolute right-0 top-1/2 -translate-y-1/2 text-3xl hover:scale-110 transition-transform"
+          aria-label="My saved recipes"
+          title="My Recipe Fridge"
+        >
+          🧊
+        </button>
       </div>
 
       {/* Form card */}
@@ -175,9 +279,7 @@ export default function Home() {
         >
           <option value="">No preference</option>
           {CUISINE_OPTIONS.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
+            <option key={c} value={c}>{c}</option>
           ))}
         </select>
 
@@ -190,25 +292,9 @@ export default function Home() {
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
-              <svg
-                className="animate-spin h-4 w-4 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8H4z"
-                />
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
               Finding recipes…
             </span>
@@ -217,6 +303,11 @@ export default function Home() {
           )}
         </button>
       </div>
+
+      {/* Progress card */}
+      {loading && progressSteps.length > 0 && (
+        <ProgressCard steps={progressSteps} stepIndex={stepIndex} />
+      )}
 
       {/* Error */}
       {error && (
@@ -236,33 +327,24 @@ export default function Home() {
                 className="w-20 h-20 flex-shrink-0 object-contain"
               />
               <div className="relative bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm">
-                {/* Tail pointing left toward robot */}
                 <span
                   aria-hidden
                   style={{
-                    position: "absolute",
-                    left: -9,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: 0,
-                    height: 0,
+                    position: "absolute", left: -9, top: "50%",
+                    transform: "translateY(-50%)", width: 0, height: 0,
                     borderTop: "8px solid transparent",
                     borderBottom: "8px solid transparent",
-                    borderRight: "9px solid #fde68a", /* amber-200 */
+                    borderRight: "9px solid #fde68a",
                   }}
                 />
                 <span
                   aria-hidden
                   style={{
-                    position: "absolute",
-                    left: -7,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: 0,
-                    height: 0,
+                    position: "absolute", left: -7, top: "50%",
+                    transform: "translateY(-50%)", width: 0, height: 0,
                     borderTop: "7px solid transparent",
                     borderBottom: "7px solid transparent",
-                    borderRight: "8px solid #fffbeb", /* amber-50 */
+                    borderRight: "8px solid #fffbeb",
                   }}
                 />
                 {renderBold(result.summary)}
@@ -284,8 +366,21 @@ export default function Home() {
         </div>
       )}
     </main>
+
+    {/* Fridge overlay — fixed, always mounted, slides in/out from the right */}
+    <div
+      className="fixed inset-0 z-40 overflow-hidden transition-transform duration-300 ease-in-out"
+      style={{ transform: view === "fridge" ? "translateX(0)" : "translateX(100%)" }}
+    >
+      <FridgeView key={view} onBack={() => setView("home")} />
+    </div>
+    </>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function renderBold(text: string) {
   return text.split("**").map((part, i) =>
@@ -294,10 +389,43 @@ function renderBold(text: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Recipe card component
+// Recipe card
 // ---------------------------------------------------------------------------
 
 type Recipe = RecipeResult["recipes"][number];
+
+function PinButton({ recipe }: { recipe: Recipe }) {
+  const [pinned, setPinned] = useState(false);
+
+  useEffect(() => {
+    setPinned(isRecipeSaved(recipe.name));
+  }, [recipe.name]);
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (pinned) {
+      removeRecipe(recipe.name);
+      setPinned(false);
+    } else {
+      saveRecipe(recipe);
+      setPinned(true);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={pinned ? "Unpin recipe" : "Pin recipe"}
+      className="absolute top-3 right-3 text-xl transition-transform hover:scale-125"
+      title={pinned ? "Remove from fridge" : "Pin to fridge"}
+    >
+      {pinned ? "📌" : (
+        <span className="opacity-40 hover:opacity-80 transition-opacity">📌</span>
+      )}
+    </button>
+  );
+}
 
 function RecipeCard({ recipe }: { recipe: Recipe }) {
   const [expanded, setExpanded] = useState(false);
@@ -308,9 +436,9 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
       : recipe.instructions;
 
   return (
-    <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+    <div className="relative bg-white rounded-2xl shadow-md overflow-hidden">
+      <PinButton recipe={recipe} />
       <div className="flex flex-col sm:flex-row">
-        {/* Thumbnail */}
         {recipe.thumbnail && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -322,7 +450,7 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
 
         <div className="p-5 flex flex-col gap-2 flex-1">
           {/* Title + badges */}
-          <div>
+          <div className="pr-8">
             <h2 className="text-lg font-bold text-gray-900">{recipe.name}</h2>
             <div className="flex flex-wrap gap-1.5 mt-1">
               {recipe.area && (
@@ -348,7 +476,7 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
             </p>
           </div>
 
-          {/* Instructions (collapsible) */}
+          {/* Instructions */}
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
               Instructions
@@ -366,7 +494,7 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
             )}
           </div>
 
-          {/* YouTube link */}
+          {/* YouTube */}
           {recipe.youtubeUrl && (
             <a
               href={recipe.youtubeUrl}
