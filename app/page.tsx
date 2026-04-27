@@ -229,9 +229,45 @@ export default function Home() {
       {result && (
         <div>
           {result.summary && (
-            <p className="text-amber-800 text-sm mb-5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-              {renderBold(result.summary)}
-            </p>
+            <div className="flex items-center gap-3 mb-5">
+              <img
+                src="/chef-robot.png"
+                alt="Chef robot"
+                className="w-20 h-20 flex-shrink-0 object-contain"
+              />
+              <div className="relative bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm">
+                {/* Tail pointing left toward robot */}
+                <span
+                  aria-hidden
+                  style={{
+                    position: "absolute",
+                    left: -9,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 0,
+                    height: 0,
+                    borderTop: "8px solid transparent",
+                    borderBottom: "8px solid transparent",
+                    borderRight: "9px solid #fde68a", /* amber-200 */
+                  }}
+                />
+                <span
+                  aria-hidden
+                  style={{
+                    position: "absolute",
+                    left: -7,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 0,
+                    height: 0,
+                    borderTop: "7px solid transparent",
+                    borderBottom: "7px solid transparent",
+                    borderRight: "8px solid #fffbeb", /* amber-50 */
+                  }}
+                />
+                {renderBold(result.summary)}
+              </div>
+            </div>
           )}
 
           {result.recipes.length === 0 ? (
