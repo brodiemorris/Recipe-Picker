@@ -313,7 +313,22 @@ export default function FridgeView({ onBack }: { onBack: () => void }) {
             ←
           </button>
           <h1 className="text-lg font-bold text-gray-800">My Recipe Fridge</h1>
-          <span className="text-lg">🧊</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-5 h-5 text-gray-700"
+            aria-hidden="true"
+          >
+            <rect x="5" y="2" width="14" height="20" rx="2" />
+            <line x1="5" y1="11" x2="19" y2="11" />
+            <line x1="8" y1="5" x2="8" y2="8" />
+            <line x1="8" y1="14" x2="8" y2="17" />
+          </svg>
         </div>
 
         <div ref={containerRef} className="relative flex-1" style={{ minHeight: "80vh" }}>

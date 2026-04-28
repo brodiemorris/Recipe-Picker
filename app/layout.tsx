@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Recipe Picker",
+  title: "Recipe Finder",
   description: "Find recipes based on your available ingredients",
 };
 
