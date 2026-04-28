@@ -211,7 +211,7 @@ export default function Home() {
             MOCK MODE
           </div>
         )}
-        <h1 className="text-4xl font-bold text-amber-800 mb-2">🍽️ Recipe Picker</h1>
+        <h1 className="text-4xl font-bold text-amber-800 mb-2">🍽️ Recipe Finder</h1>
         <p className="text-amber-700 text-lg">
           Tell us what you have, we&apos;ll find something delicious
         </p>
@@ -219,11 +219,26 @@ export default function Home() {
         <button
           type="button"
           onClick={() => setView("fridge")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 text-3xl hover:scale-110 transition-transform"
+          className="absolute right-0 top-1/2 -translate-y-1/2 text-amber-700 hover:scale-110 transition-transform"
           aria-label="My saved recipes"
           title="My Recipe Fridge"
         >
-          🧊
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-9 h-9"
+            aria-hidden="true"
+          >
+            <rect x="5" y="2" width="14" height="20" rx="2" />
+            <line x1="5" y1="11" x2="19" y2="11" />
+            <line x1="8" y1="5" x2="8" y2="8" />
+            <line x1="8" y1="14" x2="8" y2="17" />
+          </svg>
         </button>
       </div>
 
