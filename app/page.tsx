@@ -107,10 +107,17 @@ export default function Home() {
   const [result, setResult] = useState<RecipeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"home" | "fridge">("home");
+  const [mockMode, setMockMode] = useState(false);
   const stepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Clean up timer on unmount
   useEffect(() => () => { if (stepTimerRef.current) clearInterval(stepTimerRef.current); }, []);
+
+  // Detect ?mock=true in the URL on mount — bypasses the agent for fast UI testing.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setMockMode(params.get("mock") === "true");
+  }, []);
 
   const addIngredient = () => {
     const trimmed = ingredientInput.trim();
@@ -168,7 +175,11 @@ export default function Home() {
       const res = await fetch("/api/find-recipes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ingredients, cuisine: cuisine || undefined }),
+        body: JSON.stringify({
+          ingredients,
+          cuisine: cuisine || undefined,
+          mock: mockMode || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -192,6 +203,14 @@ export default function Home() {
     <main className="max-w-3xl mx-auto px-4 py-12">
       {/* Header */}
       <div className="relative text-center mb-10">
+        {mockMode && (
+          <div
+            className="absolute left-0 top-0 bg-yellow-300 text-yellow-900 text-xs font-bold px-2 py-1 rounded-md shadow-sm border border-yellow-500"
+            title="Agent bypassed — recipes shown are top prefilter candidates"
+          >
+            MOCK MODE
+          </div>
+        )}
         <h1 className="text-4xl font-bold text-amber-800 mb-2">🍽️ Recipe Picker</h1>
         <p className="text-amber-700 text-lg">
           Tell us what you have, we&apos;ll find something delicious

@@ -66,9 +66,10 @@ function toRecipeShape(m: FullMealDetails): RecipeShape {
 
 export async function POST(req: NextRequest) {
   try {
-    const { ingredients, cuisine } = (await req.json()) as {
+    const { ingredients, cuisine, mock } = (await req.json()) as {
       ingredients: string[];
       cuisine?: string;
+      mock?: boolean;
     };
 
     if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
@@ -96,6 +97,24 @@ export async function POST(req: NextRequest) {
       ingredients,
       cuisine
     );
+
+    // Mock mode: bypass the agent entirely. Used by ?mock=true on the home page to
+    // exercise the prefilter + UI without consuming Subconscious tokens. Returns the
+    // top prefilter candidates with a templated summary.
+    if (mock) {
+      const topCandidates = candidates.slice(0, 4);
+      const recipes = topCandidates.map((c) => toRecipeShape(c.recipe));
+      const subsBit = substitutions.length
+        ? ` Substituted: ${substitutions.map((s) => `${s.user}→${s.used}`).join(", ")}.`
+        : "";
+      const missedBit = missed.length
+        ? ` No matches for: ${missed.join(", ")}.`
+        : "";
+      const summary = recipes.length
+        ? `[mock mode] Top ${recipes.length} candidate${recipes.length === 1 ? "" : "s"} from the prefilter, ranked by ingredient match score. No agent ranking applied.${subsBit}${missedBit}`
+        : `[mock mode] No prefilter candidates found.${subsBit}${missedBit}`;
+      return NextResponse.json({ recipes, summary } satisfies RecipeResult);
+    }
 
     const ingredientList = ingredients.join(", ");
     const cuisineLine = cuisine
